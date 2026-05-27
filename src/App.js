@@ -8,25 +8,35 @@ import ClientDashboard from './pages/ClientDashboard';
 import WorkerDashboard from './pages/WorkerDashboard';
 import AdminDashboard from './pages/AdminDashboard'; 
 import InspectorDashboard from './pages/InspectorDashboard'; 
+import TelecallerDashboard from './pages/TelecallerDashboard'; 
 import NotFound from './pages/NotFound';
 
 // Import the NEW powerful gatekeeper we just created!
-// (Make sure the path is correct based on where you saved ProtectedRoute.jsx)
 import ProtectedRoute from './pages/ProtectedRoute';
-import TelecallerDashboard from './pages/TelecallerDashboard'; // Adjust path if needed 
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Routes */}
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<Auth />} />
-                <Route path="/telecaller" element={
-          <ProtectedRoute allowedRoles={['TELECALLER', 'SUPER_ADMIN']}>
-            <TelecallerDashboard />
-          </ProtectedRoute>
-        } />
+        {/* ============================== */}
+        {/* PUBLIC ROUTES                  */}
+        {/* ============================== */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Auth />} />
+        
+        {/* ============================== */}
+        {/* PROTECTED DASHBOARDS           */}
+        {/* ============================== */}
+        
+        {/* Telecaller Route */}
+        <Route 
+          path="/telecaller" 
+          element={
+            <ProtectedRoute allowedRoles={['TELECALLER', 'SUPER_ADMIN']}>
+              <TelecallerDashboard />
+            </ProtectedRoute>
+          } 
+        />
         
         {/* Protected Client Route */}
         <Route 
@@ -47,7 +57,6 @@ function App() {
             </ProtectedRoute>
           } 
         />
-        
 
         {/* Protected Inspector Route */}
         <Route 
@@ -68,14 +77,12 @@ function App() {
             </ProtectedRoute>
           } 
         />
-        <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         
-        {/* 🚨 THE CATCH-ALL ROUTE (Must be at the bottom) */}
+        {/* ============================== */}
+        {/* CATCH-ALL ROUTE (404)          */}
+        {/* ============================== */}
         <Route path="*" element={<NotFound />} />
-      </Routes>
+        
       </Routes>
     </Router>
   );
