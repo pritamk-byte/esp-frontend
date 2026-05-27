@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-// Replace this string with your REAL Render URL (no slash at the end)
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
+// The correct Create React App syntax with the bulletproof Render fallback!
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://esp-backend-1ufi.onrender.com';
 
 const Auth = () => {
   const [email, setEmail] = useState(''); 
