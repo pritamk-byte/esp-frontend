@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-// 🚀 NEW: Dynamic URL that works on both localhost and Vercel
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
+// Replace this string with your REAL Render URL (no slash at the end)
+const API_BASE_URL = 'https://esp-backend-1ufi.onrender.com';
 
 const Auth = () => {
   const [email, setEmail] = useState(''); 
