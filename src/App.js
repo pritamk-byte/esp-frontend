@@ -8,6 +8,7 @@ import ClientDashboard from './pages/ClientDashboard';
 import WorkerDashboard from './pages/WorkerDashboard';
 import AdminDashboard from './pages/AdminDashboard'; 
 import InspectorDashboard from './pages/InspectorDashboard'; 
+import NotFound from './pages/NotFound';
 
 // Import the NEW powerful gatekeeper we just created!
 // (Make sure the path is correct based on where you saved ProtectedRoute.jsx)
@@ -46,6 +47,7 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        
 
         {/* Protected Inspector Route */}
         <Route 
@@ -66,6 +68,14 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        
+        {/* 🚨 THE CATCH-ALL ROUTE (Must be at the bottom) */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
       </Routes>
     </Router>
   );
