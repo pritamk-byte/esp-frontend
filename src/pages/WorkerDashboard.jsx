@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// The correct Create React App syntax with the bulletproof Render fallback!
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://esp-backend-1ufi.onrender.com';
 
 export default function WorkerDashboard() {
@@ -98,7 +97,8 @@ export default function WorkerDashboard() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error);
-      alert(result.message);
+      
+      // Visual feedback: instantly update the UI so the button changes
       setJobs(prev => prev.map(job => job.id === requestId ? { ...job, interests: [{ id: 'temp' }] } : job));
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -106,13 +106,12 @@ export default function WorkerDashboard() {
   };
 
   const handleCompleteJob = async (requestId) => {
-    if (!window.confirm("Mark this job as completed?")) return;
+    if (!window.confirm("Mark this job as completed? Ensure you have finished all tasks on site.")) return;
     try {
       await fetch(`${API_BASE_URL}/api/worker/my-jobs/${requestId}/complete`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
-      alert("Job marked as completed!");
       fetchMyJobs(); 
     } catch (err) {
       alert(`Error: ${err.message}`);
@@ -125,194 +124,240 @@ export default function WorkerDashboard() {
     navigate('/login');
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+  // --------------------------------------------------------
+  // FULL PAGE LOADING STATE
+  // --------------------------------------------------------
+  if (loading && !profile) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+        <p className="text-gray-500 font-medium">Loading your workspace...</p>
+      </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-6 font-sans text-gray-900">
-      <div className="max-w-4xl mx-auto">
-        
-        {/* Unified Header */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded shadow-sm mb-6 gap-4 border-t-4 border-t-green-600">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">Professional Portal</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage your work and find new opportunities.</p>
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-12">
+      
+      {/* 1. TOP NAVIGATION HEADER */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-600 text-white p-1.5 rounded-lg text-lg">👷</div>
+            <h1 className="text-xl font-black tracking-tight text-gray-900 hidden sm:block">ESP Professional</h1>
+            <h1 className="text-xl font-black tracking-tight text-gray-900 sm:hidden">ESP</h1>
           </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
-            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1.5 rounded border border-gray-200 tracking-wide">
-              WORKER
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase tracking-wide">
+              {profile?.name || 'Worker'}
             </span>
             <button 
               onClick={handleLogout} 
-              className="w-full sm:w-auto px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-medium rounded transition"
+              className="text-sm font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-colors"
             >
-              Log Out
+              Logout
             </button>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* KYC GATEKEEPER UI */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        
+        {/* =========================================================================
+            KYC GATEKEEPER UI (Blocks access until approved)
+        ========================================================================= */}
         {profile?.verificationStatus !== 'APPROVED' ? (
-          <div className="bg-white p-6 md:p-10 rounded shadow-sm border border-gray-200 text-center max-w-xl mx-auto mt-8">
+          <div className="max-w-xl mx-auto mt-12 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
             
             {profile?.verificationStatus === 'UNVERIFIED' || profile?.verificationStatus === 'REJECTED' ? (
-              <>
-                <div className="text-4xl mb-4">🛡️</div>
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">Identity Verification Required</h2>
-                <p className="text-sm text-gray-600 mb-8 leading-relaxed">
-                  {profile?.verificationStatus === 'REJECTED' 
-                    ? <span className="text-red-600 font-bold bg-red-50 p-2 rounded block border border-red-100">Your previous submission was rejected. Please upload a clear, valid Government ID.</span>
-                    : "To ensure client safety, all professionals must submit a valid Government ID before accessing the job marketplace."}
-                </p>
-                <form onSubmit={submitKYC} className="space-y-5 text-left">
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Document Link (Drive, Dropbox, etc.)</label>
-                    <input 
-                      type="url" 
-                      required 
-                      value={idUrl} 
-                      onChange={e => setIdUrl(e.target.value)} 
-                      placeholder="https://..."
-                      className="w-full p-3 border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none transition text-sm"
-                    />
-                    <p className="text-xs text-gray-500 mt-2 font-medium">⚠️ Make sure the link permissions are set to "Anyone with the link can view".</p>
-                  </div>
-                  <button type="submit" className="w-full bg-green-600 text-white font-bold py-3 rounded hover:bg-green-700 transition shadow-sm">
-                    Submit for Verification
-                  </button>
-                </form>
-              </>
+              <div>
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-8 text-center text-white">
+                  <div className="text-5xl mb-4">🛡️</div>
+                  <h2 className="text-2xl font-black mb-2">Identity Verification</h2>
+                  <p className="text-emerald-100 text-sm">Required to access the job marketplace.</p>
+                </div>
+                
+                <div className="p-8">
+                  {profile?.verificationStatus === 'REJECTED' && (
+                    <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+                      <p className="text-sm font-bold text-red-800">Your previous submission was rejected.</p>
+                      <p className="text-xs text-red-600 mt-1">Please ensure your document is a clear, valid Government ID and the link is publicly viewable.</p>
+                    </div>
+                  )}
+                  
+                  <form onSubmit={submitKYC} className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-900 mb-2">Document Link (Drive, Dropbox, etc.)</label>
+                      <input 
+                        type="url" 
+                        required 
+                        value={idUrl} 
+                        onChange={e => setIdUrl(e.target.value)} 
+                        placeholder="https://..."
+                        className="w-full p-3.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm"
+                      />
+                      <p className="text-xs text-gray-500 mt-2 font-medium flex items-center gap-1">
+                        <span>⚠️</span> Ensure permissions are set to "Anyone with the link can view".
+                      </p>
+                    </div>
+                    <button type="submit" className="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl hover:bg-gray-800 transition-colors shadow-sm text-lg">
+                      Submit Securely
+                    </button>
+                  </form>
+                </div>
+              </div>
             ) : (
-              <div className="py-8">
-                <div className="text-5xl mb-6 animate-pulse">⏳</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Review in Progress</h3>
-                <p className="text-gray-600 text-sm">Our administrative team is currently reviewing your identity document. This usually takes a few hours. Check back soon!</p>
+              <div className="p-12 text-center">
+                <div className="text-6xl mb-6 animate-bounce-slow">⏳</div>
+                <h3 className="text-2xl font-black text-gray-900 mb-3">Review in Progress</h3>
+                <p className="text-gray-500 leading-relaxed max-w-sm mx-auto">
+                  Our administrative team is verifying your identity document. This typically takes a few hours. Check back soon to access the marketplace!
+                </p>
               </div>
             )}
           </div>
         ) : (
           
-          /* THE ACTUAL DASHBOARD (Only shown if APPROVED) */
+          /* =========================================================================
+             THE ACTUAL DASHBOARD (Only shown if APPROVED)
+          ========================================================================= */
           <>
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+            {/* Dashboard Tabs */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2 mb-8 flex overflow-x-auto scrollbar-hide">
               <button 
                 onClick={() => setActiveTab('MARKETPLACE')} 
-                className={`flex-1 sm:flex-none whitespace-nowrap px-4 py-2.5 text-sm font-medium rounded transition-colors ${
-                  activeTab === 'MARKETPLACE' ? 'bg-green-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                className={`flex-1 min-w-[150px] py-2.5 px-4 text-sm font-bold rounded-lg transition-all text-center whitespace-nowrap ${
+                  activeTab === 'MARKETPLACE' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
-                Find Work
+                🔍 Job Marketplace
               </button>
               <button 
                 onClick={() => setActiveTab('MY_JOBS')} 
-                className={`flex-1 sm:flex-none whitespace-nowrap px-4 py-2.5 text-sm font-medium rounded transition-colors ${
-                  activeTab === 'MY_JOBS' ? 'bg-green-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                className={`flex-1 min-w-[150px] py-2.5 px-4 text-sm font-bold rounded-lg transition-all text-center whitespace-nowrap ${
+                  activeTab === 'MY_JOBS' ? 'bg-emerald-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
-                My Active Jobs
+                📋 My Active Jobs
               </button>
             </div>
 
-            {error && <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded border border-red-200">{error}</div>}
+            {error && <div className="mb-6 p-4 bg-red-50 text-red-700 text-sm font-medium rounded-lg border-l-4 border-red-500">{error}</div>}
 
+            {/* TAB 1: MARKETPLACE */}
             {activeTab === 'MARKETPLACE' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {jobs.length === 0 ? (
-                  <div className="col-span-full p-12 text-center text-gray-500 bg-white rounded shadow-sm border border-gray-200">
-                    No new jobs available in the marketplace right now.
+              <div>
+                <h2 className="text-2xl font-black text-gray-900 mb-6">Available Jobs in your area</h2>
+                
+                {loading ? (
+                   <div className="text-center p-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div></div>
+                ) : jobs.length === 0 ? (
+                  <div className="text-center p-16 bg-white rounded-2xl border-2 border-dashed border-gray-200">
+                    <p className="text-gray-500 font-medium text-lg">No new jobs available right now.</p>
+                    <p className="text-gray-400 text-sm mt-1">Check back later when admins post new tasks.</p>
                   </div>
                 ) : (
-                  jobs.map((job) => {
-                    const hasApplied = job.interests && job.interests.length > 0;
-                    return (
-                      <div key={job.id} className="bg-white rounded shadow-sm border border-gray-200 p-5 flex flex-col justify-between">
-                        <div>
-                          <div className="flex justify-between items-start mb-3">
-                            <h3 className="text-lg font-bold text-gray-900 leading-tight pr-2">{job.title}</h3>
-                            <span className="bg-blue-50 text-blue-700 border border-blue-100 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide whitespace-nowrap">
-                              {job.serviceType}
-                            </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {jobs.map((job) => {
+                      const hasApplied = job.interests && job.interests.length > 0;
+                      return (
+                        <div key={job.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
+                          <div>
+                            <div className="flex justify-between items-start mb-4 gap-2">
+                              <h3 className="text-lg font-bold text-gray-900 leading-tight">{job.title}</h3>
+                              <span className="bg-blue-50 text-blue-700 border border-blue-100 text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest whitespace-nowrap">
+                                {job.serviceType}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-5 line-clamp-3 leading-relaxed">{job.description}</p>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 mb-6 font-medium bg-gray-50 p-2 rounded-lg border border-gray-100">
+                              <span>📍</span> 
+                              <span className="truncate">{job.location}</span>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600 mb-4 line-clamp-3 leading-relaxed">{job.description}</p>
-                          <div className="flex items-center gap-2 text-sm text-gray-500 mb-6 font-medium">
-                            <span>📍</span> 
-                            <span className="truncate">{job.location}</span>
-                          </div>
+                          <button 
+                            onClick={() => handleApply(job.id)} 
+                            disabled={hasApplied} 
+                            className={`w-full py-3 px-4 rounded-xl text-sm font-bold transition-all ${
+                              hasApplied 
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' 
+                                : 'bg-gray-900 text-white hover:bg-gray-800 shadow-sm'
+                            }`}
+                          >
+                            {hasApplied ? 'Application Sent ✓' : 'Express Interest'}
+                          </button>
                         </div>
-                        <button 
-                          onClick={() => handleApply(job.id)} 
-                          disabled={hasApplied} 
-                          className={`w-full py-2.5 px-4 rounded text-sm font-bold transition-all ${
-                            hasApplied 
-                              ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed' 
-                              : 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
-                          }`}
-                        >
-                          {hasApplied ? 'Application Submitted ✓' : 'Express Interest'}
-                        </button>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}
 
+            {/* TAB 2: MY JOBS */}
             {activeTab === 'MY_JOBS' && (
-              <div className="space-y-4">
-                {myJobs.length === 0 ? (
-                  <div className="p-12 text-center text-gray-500 bg-white rounded shadow-sm border border-gray-200">
-                    You don't have any assigned jobs yet.
+              <div>
+                <h2 className="text-2xl font-black text-gray-900 mb-6">Your Assignments</h2>
+
+                {loading ? (
+                   <div className="text-center p-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto"></div></div>
+                ) : myJobs.length === 0 ? (
+                  <div className="text-center p-16 bg-white rounded-2xl border-2 border-dashed border-gray-200">
+                    <p className="text-gray-500 font-medium text-lg">You don't have any assigned jobs yet.</p>
+                    <p className="text-gray-400 text-sm mt-1">Apply for jobs in the marketplace to get started.</p>
                   </div>
                 ) : (
-                  myJobs.map((job) => (
-                    <div key={job.id} className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
-                      
-                      {/* Card Header */}
-                      <div className={`p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 ${job.status === 'COMPLETED' ? 'bg-gray-50' : 'bg-white'}`}>
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900">{job.title}</h3>
-                          <span className={`text-xs font-bold ${job.status === 'COMPLETED' ? 'text-gray-500' : 'text-green-600'}`}>
-                            {job.status.replace(/_/g, ' ')}
-                          </span>
-                        </div>
-                        {job.status === 'WORKER_ASSIGNED' || job.status === 'IN_PROGRESS' ? (
-                          <button 
-                            onClick={() => handleCompleteJob(job.id)} 
-                            className="w-full sm:w-auto bg-gray-900 text-white text-sm font-bold px-4 py-2 rounded hover:bg-gray-800 transition shadow-sm"
-                          >
-                            ✓ Mark Completed
-                          </button>
-                        ) : (
-                          <span className="bg-gray-200 text-gray-600 text-xs font-bold px-3 py-1.5 rounded w-full sm:w-auto text-center border border-gray-300">
-                            Finished
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Card Body */}
-                      <div className={`p-4 ${job.status === 'COMPLETED' ? 'opacity-75' : ''}`}>
-                        <p className="text-sm text-gray-700 mb-5 leading-relaxed">{job.description}</p>
+                  <div className="space-y-6">
+                    {myJobs.map((job) => (
+                      <div key={job.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                         
-                        <div className="bg-gray-50 p-4 rounded border border-gray-100">
-                          <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Client Details</h4>
-                          <div className="text-sm text-gray-800 space-y-1.5">
-                            <p className="flex items-center gap-2">
-                              <span>✉️</span> 
-                              <a href={`mailto:${job.client?.email}`} className="text-blue-600 hover:underline">{job.client?.email}</a>
-                            </p>
-                            <p className="flex items-start gap-2">
-                              <span>📍</span> 
-                              <span>{job.location}</span>
-                            </p>
+                        {/* Card Header */}
+                        <div className={`p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${job.status === 'COMPLETED' ? 'bg-gray-50' : 'bg-white'}`}>
+                          <div>
+                            <h3 className="text-xl font-black text-gray-900 mb-1">{job.title}</h3>
+                            <span className={`text-xs font-black uppercase tracking-widest ${job.status === 'COMPLETED' ? 'text-gray-400' : 'text-emerald-600'}`}>
+                              Status: {job.status.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                          {job.status === 'WORKER_ASSIGNED' || job.status === 'IN_PROGRESS' ? (
+                            <button 
+                              onClick={() => handleCompleteJob(job.id)} 
+                              className="w-full sm:w-auto bg-emerald-600 text-white text-sm font-bold px-6 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+                            >
+                              ✓ Mark as Completed
+                            </button>
+                          ) : (
+                            <span className="bg-gray-200 text-gray-500 text-xs font-bold px-4 py-2 rounded-lg w-full sm:w-auto text-center border border-gray-300">
+                              Archived
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Card Body */}
+                        <div className={`p-5 grid grid-cols-1 md:grid-cols-3 gap-6 ${job.status === 'COMPLETED' ? 'opacity-75' : ''}`}>
+                          <div className="md:col-span-2">
+                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Job Description</h4>
+                            <p className="text-sm text-gray-700 leading-relaxed">{job.description}</p>
+                          </div>
+                          
+                          <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 h-fit">
+                            <h4 className="text-xs font-black text-blue-800 uppercase tracking-widest mb-3">Client Details</h4>
+                            <div className="text-sm text-gray-900 space-y-3 font-medium">
+                              <p className="flex items-center gap-3">
+                                <span className="bg-white p-1.5 rounded shadow-sm">✉️</span> 
+                                <a href={`mailto:${job.client?.email}`} className="hover:text-blue-600 truncate">{job.client?.email}</a>
+                              </p>
+                              <p className="flex items-start gap-3">
+                                <span className="bg-white p-1.5 rounded shadow-sm">📍</span> 
+                                <span className="line-clamp-2">{job.location}</span>
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                    </div>
-                  ))
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
